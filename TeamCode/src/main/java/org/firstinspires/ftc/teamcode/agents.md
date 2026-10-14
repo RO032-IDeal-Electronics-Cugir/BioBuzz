@@ -5,7 +5,8 @@ in the BioBuzz season.
 
 Video with the animation for the season's gameplay: https://www.youtube.com/watch?v=sUH3z5a5S9I
 Video with more information about the competition and about the new season: https://www.youtube.com/watch?v=gO98TkgY0kI
-Link to the official pedropathing website that we are using: https://pedropathing.com/ this also have: https://pedropathing.com/docs, Ivy: https://pedropathing.com/docs/ivy, vizualizer: https://visualizer.pedropathing.com/ 
+Link to the official pedropathing website that we are using: https://pedropathing.com/ this also have: https://pedropathing.com/docs, 
+Ivy: https://pedropathing.com/docs/ivy, vizualizer: https://visualizer.pedropathing.com/ 
 
 This is the stack that we use: Java in Android Studio, Pedro Pathing library
 for autonomous period
