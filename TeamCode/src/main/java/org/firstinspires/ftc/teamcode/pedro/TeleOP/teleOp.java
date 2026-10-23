@@ -3,9 +3,10 @@ package org.firstinspires.ftc.teamcode.pedro.TeleOP;
 import com.pedropathing.follower.Follower;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.seattlesolvers.solverslib.command.WaitCommand;
+import com.seattlesolvers.solverslib.command.CommandScheduler;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Commands.shootCommand;
 import org.firstinspires.ftc.teamcode.pedro.Subsystems.intakeSubsystem;
 import org.firstinspires.ftc.teamcode.pedro.Subsystems.shootingSubsystem;
 
@@ -23,6 +24,7 @@ public class teleOp extends OpMode {
 
     @Override
     public void init() {
+        CommandScheduler.getInstance().reset();
         follower = Constants.create(hardwareMap);
         intake = new intakeSubsystem(hardwareMap);
         shooter = new shootingSubsystem(hardwareMap);
@@ -41,6 +43,9 @@ public class teleOp extends OpMode {
 
     @Override
     public void loop() {
+        // Run command scheduler for command-based actions (e.g., shootCommand)
+        CommandScheduler.getInstance().run();
+
         if (gamepad1.rightBumperWasPressed()) {
             slowMode = !slowMode;
         }
@@ -66,8 +71,9 @@ public class teleOp extends OpMode {
             telemetry.addData("Mode", follower.mode());
         }
 
-        if (gamepad1.y) {
-            shooter.setPower(1.0);
+        // Trigger shootCommand when X button is pressed
+        if (gamepad1.yWasPressed()) {
+            CommandScheduler.getInstance().schedule(new shootCommand(shooter, 6000.0));
         }
 
         if (gamepad1.aWasPressed()) {
@@ -80,9 +86,7 @@ public class teleOp extends OpMode {
         }
 
         telemetry.addData("Slow Mode", slowMode);
-        telemetry.addData("Shooter Power", gamepad1.y ? "100%" : "30%");
         telemetry.addData("Shooter rpm", shooter.getShooterCurrentRPM());
-        telemetry.addData("Shooter target rpm", shooter.getShooterTargetRPM());
         telemetry.update();
     }
 }

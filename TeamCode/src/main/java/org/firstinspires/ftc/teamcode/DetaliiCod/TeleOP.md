@@ -15,9 +15,11 @@ Teleop OpMode classes that read gamepad input and drive the robot, using the tea
     - Right Bumper toggle: Slow Mode (multiplies drive inputs by 0.4).
     - Left Bumper: hold-to-brake (`follower.manual(0, 0, 0)`).
   - Mechanisms:
-    - **Y Button (`gamepad1.y`)**: runs shooter at 100% power (1.0) while held; defaults to 30% power (0.3) idle.
+    - **Y Button (`gamepad1.y`)**: runs shooter at 100% power (1.0) while held.
+    - **X Button (`gamepad1.xWasPressed()`)**: schedules `shootCommand` via SolversLib `CommandScheduler` to execute the automated shooting sequence (spin up to 3000 RPM, wait until reached, hold, and stop).
     - **A button (`gamepad1.aWasPressed()`)**: toggles intake on (`setPower(-1.0)`) or off (`setPower(0.0)`).
-  - Uses `shootingSubsystem` and `intakeSubsystem`.
+  - Telemetry: Adds `Shooter Raw Velocity`, `Shooter rpm`, and `Shooter target rpm` for debugging encoder feedback.
+  - Uses `shootingSubsystem`, `intakeSubsystem`, `shootCommand`, and SolversLib `CommandScheduler`.
 - `TeleOpMain.java` — Main teleop OpMode reading gamepad driver inputs (see `TeleOpMain.md`).
 
 **Notes for planners:**
