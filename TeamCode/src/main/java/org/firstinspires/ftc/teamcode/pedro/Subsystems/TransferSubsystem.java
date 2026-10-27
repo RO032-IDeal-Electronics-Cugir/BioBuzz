@@ -14,7 +14,7 @@ public class TransferSubsystem extends SubsystemBase {
      * @param hardwareMap Obiectul hardwareMap de la OpMode.
      */
     public TransferSubsystem(HardwareMap hardwareMap) {
-        transferMotor = hardwareMap.get(DcMotorEx.class, "motorIntake");
+        transferMotor = hardwareMap.get(DcMotorEx.class, "motorTransfer");
 
         //transferMotor.setDirection(DcMotor.Direction.REVERSE);
         transferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);

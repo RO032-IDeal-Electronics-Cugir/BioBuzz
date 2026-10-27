@@ -9,11 +9,12 @@ Home for teleop-period OpModes — the routines controlled by drivers during the
 Teleop OpMode classes that read gamepad input and drive the robot, using the team's subsystems, constants, and Pedro Pathing as appropriate. These should be selectable on the driver station for the teleop period.
 
 **Existing OpModes:**
-- `teleOP.java` — Current driver-controlled OpMode (`TeleOP`) using Pedro Pathing manual drive and Ivy Scheduler.
+- `teleOP.java` — Current driver-controlled OpMode (`TeleOP`) using Pedro Pathing manual drive, Ivy Scheduler, and SolversLib `GamepadEx`.
   - Drivetrain: `follower.manual(forward, strafe, turn)` with null checks and `follower.update()` called in `loop()`.
     - Left stick Y (`forward`), Left stick X (`strafe`), Triggers (`turn`).
-  - **Dpad Up (`gamepad1.dpad_up`)**: Automatically evaluates the closest flower via `ClosestFlower.getClosestFlower(...)` and schedules path following (`Scheduler.schedule(follow(follower, line(currentPose, targetPose)))`) to drive to that flower.
-  - Position Tracking: Retrieves real-time position using `follower.localizer.pose()` and displays X, Y, Heading, and Closest Flower on telemetry.
+  - **A Button (`driver1.wasJustPressed(GamepadKeys.Button.A)`)**: Toggles both `IntakeSubsystem` and `TransferSubsystem` on (power 1.0) and off (`stop()`) upon each press.
+  - **Dpad Up (`gamepad1.dpad_up`)**: Automatically evaluates the closest flower via `ClosestFlower.getClosestFlower(...)` and schedules path following to drive to that flower.
+  - Position Tracking: Retrieves real-time position using `follower.localizer.pose()` and displays X, Y, Heading, Closest Flower, and Intake Status on telemetry.
   - Uses Pedro Pathing `Follower` via `Constants.create(hardwareMap)`.
 
 **Notes for planners:**

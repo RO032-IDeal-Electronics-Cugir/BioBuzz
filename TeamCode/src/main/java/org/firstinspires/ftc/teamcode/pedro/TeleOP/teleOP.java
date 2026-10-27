@@ -6,9 +6,13 @@ import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.seattlesolvers.solverslib.gamepad.GamepadEx;
+import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.teamcode.pedro.Commands.ClosestFlower;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.pedro.Subsystems.TransferSubsystem;
 
 import static com.pedropathing.api.Paths.line;
 import static com.pedropathing.ivy.Scheduler.schedule;
@@ -18,11 +22,19 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 public class teleOP extends OpMode {
 
     private Follower follower;
+    private GamepadEx driver1;
+    private IntakeSubsystem intake;
+    private TransferSubsystem transfer;
+    public static Boolean intakeIsOn = false;
     private final PoseFactory p = PoseFactory.degrees();
 
     @Override
     public void init() {
         Scheduler.reset();
+        intakeIsOn = false;
+        driver1 = new GamepadEx(gamepad1);
+        intake = new IntakeSubsystem(hardwareMap);
+        transfer = new TransferSubsystem(hardwareMap);
         follower = Constants.create(hardwareMap);
         telemetry.addData("Status", "TeleOp Initialized");
         telemetry.update();
@@ -30,6 +42,9 @@ public class teleOP extends OpMode {
 
     @Override
     public void loop() {
+        // Read gamepad button states so wasJustPressed works correctly
+        driver1.readButtons();
+
         double forward = -gamepad1.left_stick_y;
         double strafe = -gamepad1.left_stick_x;
         double turn = -gamepad1.right_trigger + gamepad1.left_trigger;
@@ -60,6 +75,18 @@ public class teleOP extends OpMode {
                 follower.manual(forward, strafe, turn);
             }
 
+            if (driver1.wasJustPressed(GamepadKeys.Button.A)) {
+                intakeIsOn = !intakeIsOn;
+            }
+
+            if (intakeIsOn) {
+                intake.setPower(0.3);
+                transfer.setPower(0.3);
+            } else {
+                intake.stop();
+                transfer.stop();
+            }
+
             follower.update();
             Scheduler.execute();
 
@@ -68,6 +95,7 @@ public class teleOP extends OpMode {
             telemetry.addData("Y", currentPose.y());
             telemetry.addData("Heading", currentPose.heading());
             telemetry.addData("Closest Flower", ClosestFlower.getClosestFlower(currentPose));
+            telemetry.addData("Intake On", intakeIsOn);
             telemetry.addData("Mode", follower.mode());
         }
 
