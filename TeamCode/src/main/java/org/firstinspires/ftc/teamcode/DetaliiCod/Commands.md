@@ -7,7 +7,6 @@ Home for command-layer code that composes subsystems into more complex functions
 
 **Current Contents:**
 - **`ClosestFlower.java`**: Utility/command class that stores flower target poses (`FLOARE_JOS`, `FLOARE_DREAPTA`, `FLOARE_SUS`, `FLOARE_STANGA`) and computes via Euclidean distance (`Math.hypot`) which flower is closest to the robot's current pose (`getClosestFlower(Pose)`).
-- **`shootCommand.java`**: SolversLib command group managing the shooting sequence with velocity PID/F and FSM-like states.
 
 **Notes for planners:**
 - Commands should be built **from** the existing Subsystems, not from raw hardware.

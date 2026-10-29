@@ -12,8 +12,11 @@ Teleop OpMode classes that read gamepad input and drive the robot, using the tea
 - `teleOP.java` — Current driver-controlled OpMode (`TeleOP`) using Pedro Pathing manual drive, Ivy Scheduler, and SolversLib `GamepadEx`.
   - Drivetrain: `follower.manual(forward, strafe, turn)` with null checks and `follower.update()` called in `loop()`.
     - Left stick Y (`forward`), Left stick X (`strafe`), Triggers (`turn`).
-  - **A Button (`driver1.wasJustPressed(GamepadKeys.Button.A)`)**: Toggles both `IntakeSubsystem` and `TransferSubsystem` on (power 1.0) and off (`stop()`) upon each press.
-  - **Dpad Up (`gamepad1.dpad_up`)**: Automatically evaluates the closest flower via `ClosestFlower.getClosestFlower(...)` and schedules path following to drive to that flower.
+  - Position Initializing: Sets `follower.setPose(new Pose(0, 0, 0))` in `init()` to guarantee a valid starting pose and heading.
+  - **Intake & Transfer Controls (`handleDriver1Controls()`)**:
+    - Right Joystick Y (`driver1.getRightY()`): Manual analog control over `IntakeSubsystem` and `TransferSubsystem`. Overrides toggle mode when moved past deadzone (`0.1`).
+    - **A Button (`driver1.wasJustPressed(GamepadKeys.Button.A)`)**: Toggles both `IntakeSubsystem` and `TransferSubsystem` on (power `0.8`) and off (`stop()`).
+  - **Dpad Up (`gamepad1.dpad_up`)**: Automatically evaluates the closest flower via `ClosestFlower.getClosestFlower(...)` and schedules hold/navigation (`schedule(hold(follower, targetPose))`) to drive to that flower.
   - Position Tracking: Retrieves real-time position using `follower.localizer.pose()` and displays X, Y, Heading, Closest Flower, and Intake Status on telemetry.
   - Uses Pedro Pathing `Follower` via `Constants.create(hardwareMap)`.
 
