@@ -12,12 +12,12 @@ Teleop OpMode classes that read gamepad input and drive the robot, using the tea
 - `teleOP.java` — Current driver-controlled OpMode (`TeleOP`) using Pedro Pathing manual drive, Ivy Scheduler, and SolversLib `GamepadEx`.
   - Drivetrain: `follower.manual(forward, strafe, turn)` with null checks and `follower.update()` called in `loop()`.
     - Left stick Y (`forward`), Left stick X (`strafe`), Triggers (`turn`).
-  - Position Initializing: Sets `follower.setPose(new Pose(0, 0, 0))` in `init()` to guarantee a valid starting pose and heading.
+  - Position Initializing: Sets `follower.setPose(new Pose(110, 96, 0))` in `init()`.
+  - **Turret Auto-Aim (`gamepad1.b` / `CIRCLE`)**: Toggles continuous auto-aim mode on/off. When active, continuously executes `turret.updateAim(...)` in every `loop()` iteration to keep the turret aimed at target `(144.0, 144.0)` as the robot moves.
   - **Intake & Transfer Controls (`handleDriver1Controls()`)**:
-    - Right Joystick Y (`driver1.getRightY()`): Manual analog control over `IntakeSubsystem` and `TransferSubsystem`. Overrides toggle mode when moved past deadzone (`0.1`).
-    - **A Button (`driver1.wasJustPressed(GamepadKeys.Button.A)`)**: Toggles both `IntakeSubsystem` and `TransferSubsystem` on (power `0.8`) and off (`stop()`).
+    - **A Button (`driver1.wasJustPressed(GamepadKeys.Button.A)`)**: Toggles both `IntakeSubsystem` and `TransferSubsystem` on (power `0.75`) and off (`stop()`).
   - **Dpad Up (`gamepad1.dpad_up`)**: Automatically evaluates the closest flower via `ClosestFlower.getClosestFlower(...)` and schedules hold/navigation (`schedule(hold(follower, targetPose))`) to drive to that flower.
-  - Position Tracking: Retrieves real-time position using `follower.localizer.pose()` and displays X, Y, Heading, Closest Flower, and Intake Status on telemetry.
+  - Position Tracking: Retrieves real-time position using `follower.localizer.pose()` and displays X, Y, Heading, Closest Flower, Intake Status, and Turret Target Angle / Servo Position on telemetry.
   - Uses Pedro Pathing `Follower` via `Constants.create(hardwareMap)`.
 
 **Notes for planners:**
