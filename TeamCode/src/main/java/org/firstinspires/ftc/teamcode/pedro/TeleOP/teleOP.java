@@ -27,7 +27,7 @@ public class teleOP extends OpMode {
     private TransferSubsystem transfer;
     public static Boolean intakeIsOn = false;
 
-    // --- Turela ---
+    // --- Subsystem Turelă cu Encoder Absolut ---
     private TurretSubsystem turret;
     private boolean turretAutoAimActive = false;
 
@@ -40,15 +40,16 @@ public class teleOP extends OpMode {
         transfer = new TransferSubsystem(hardwareMap);
         follower = Constants.create(hardwareMap);
 
-        // Inițializare Subsystem Turelă
-        turret = new TurretSubsystem(hardwareMap, "turretServo");
+        // Inițializare Subsystem Turelă (CRServo + Encoder Analogic)
+        turret = new TurretSubsystem(hardwareMap, "turretServo", "turretEncoder");
         turret.setInvertServo(true);
         turret.centerTurret();
-
-        // Poziția inițială pe teren
+        turret.stop();
+        // Poziția inițială a robotului pe teren
         follower.setPose(new Pose(110, 96, 0));
 
         telemetry.addData("Status", "TeleOp Initialized");
+        telemetry.addData("Turret Current Encoder (deg)", turret.getCurrentAngleDeg());
         telemetry.update();
     }
 
@@ -56,7 +57,7 @@ public class teleOP extends OpMode {
     public void loop() {
         driver1.readButtons();
 
-        // 1. ACTUALIZARE ODOMETRIE (CRUCIAL: trebuie apelat LA ÎNCEPUTUL loop-ului)
+        // 1. ACTUALIZARE ODOMETRIE (Trebuie rulat la începutul loop-ului)
         follower.update();
         Scheduler.execute();
 
@@ -72,20 +73,20 @@ public class teleOP extends OpMode {
             turretAutoAimActive = !turretAutoAimActive;
         }
 
-        // 3. LOGICĂ TURELĂ (Prelucrează noua poziție din TurretSubsystem cu offset)
+        // 3. LOGICĂ CONTROL TURELĂ (Buclă Închisă)
         if (turretAutoAimActive) {
-            // Folosește automat redGoalPose cu tot cu offset-ul hardware configurat în TurretSubsystem
+            // Actualizează continuu poziția target recalculată din odometrie + offset
             turret.update(currentPose);
-
-            // Dacă ai nevoie să vizezi alt punct dinamic pe teren (ex: coșul albastru):
-            // turret.updateAim(currentPose, TARGET_X, TARGET_Y);
         } else {
-            // Control Manual Turelă
+            // Control Manual din Joystick Dreapta (X)
             final double TURRET_DEADZONE = 0.1;
             double manualInput = -driver1.getRightX();
 
             if (Math.abs(manualInput) > TURRET_DEADZONE) {
                 turret.manualControl(manualInput);
+            } else {
+                // Menține poziția curentă setată (Closed-Loop hold)
+                turret.setTargetAngle(Math.toRadians(turret.getTargetAngleDeg()));
             }
         }
 
@@ -111,13 +112,15 @@ public class teleOP extends OpMode {
 
         handleDriver1Controls();
 
-        // 5. TELEMETRIE
-        telemetry.addData("X", currentPose.x());
-        telemetry.addData("Y", currentPose.y());
-        telemetry.addData("Heading (deg)", Math.toDegrees(currentPose.heading()));
-        telemetry.addData("Turret Auto-Aim", turretAutoAimActive ? "ACTIV" : "MANUAL");
-        telemetry.addData("Turret Angle Target (deg)", turret.getTargetAngleDeg());
-        telemetry.addData("Turret Servo Position", turret.getLastServoPos());
+        // 5. TELEMETRIE ÎN TIMP REAL PENTRU TURING PID & CONTROL
+        telemetry.addData("Robot X", currentPose.x());
+        telemetry.addData("Robot Y", currentPose.y());
+        telemetry.addData("Robot Heading (deg)", Math.toDegrees(currentPose.heading()));
+        telemetry.addData("--- TURELĂ ---", "");
+        telemetry.addData("Turret Mode", turretAutoAimActive ? "AUTO-AIM (ODOMETRIE)" : "MANUAL");
+        telemetry.addData("Turret Target Angle (deg)", turret.getTargetAngleDeg());
+        telemetry.addData("Turret Current Encoder (deg)", turret.getCurrentAngleDeg());
+        telemetry.addData("Turret Motor Power", turret.getLastPower());
         telemetry.addData("Intake Running", intakeIsOn);
         telemetry.update();
     }

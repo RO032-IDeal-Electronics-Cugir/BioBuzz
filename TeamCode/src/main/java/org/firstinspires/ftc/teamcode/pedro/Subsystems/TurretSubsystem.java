@@ -1,39 +1,46 @@
 package org.firstinspires.ftc.teamcode.pedro.Subsystems;
 
 import com.pedropathing.math.Pose;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 public class TurretSubsystem extends SubsystemBase {
 
-    private final Servo turretServo;
+    private final CRServo turretServo;
+    private final AnalogInput encoder;
 
-    // SPECIFICAȚII FIZICE HARDWARE
-    public static double SERVO_RANGE_RADIANS = Math.toRadians(355.0); // Cursa totală a servoului (de ex. Axon 300 grade)
+    // --- REGLAJ PID PENTRU CRSERVO ---
+    public static double kP = 0.45;  // Redus de la 1.5 pentru a elimina oscilațiile
+    public static double kD = 0.02;  // Amortizează mișcarea la apropierea de țintă
+    public static double MIN_POWER = 0.04;
+    public static double ALLOWED_ERROR_RAD = Math.toRadians(1.5); // Deadband de 1.5 grade
 
-    // ADJUST ME: Dacă turela nu privește exact în față la poziția 0.5 a servoului, ajustează aici în grade
+    public static double ENCODER_VOLTAGE_MAX = 3.3;
     public static double ZERO_OFFSET_RADIANS = Math.toRadians(-5);
-
-    // Limite fizice de siguranță (față de centrul robotului)
-    public static double MIN_SAFE_ANGLE = Math.toRadians(-350.0);
-    public static double MAX_SAFE_ANGLE = Math.toRadians(350.0);
-
     public static double MANUAL_STEP_RADIANS = Math.toRadians(2.5);
+
+    public static double TURRET_OFFSET_X = -7.87;
+    public static double TURRET_OFFSET_Y = 4.33;
 
     private final Pose redGoalPose = new Pose(127, 129, 0);
 
-    private double lastTargetDeg = 0.0;
-    private double lastServoPos = 0.5;
+    private double targetAngleRad = 0.0;
+    private double lastPower = 0.0;
+    private double lastError = 0.0;
 
     public TurretSubsystem(HardwareMap hardwareMap) {
-        this(hardwareMap, "turretServo");
+        this(hardwareMap, "turretServo", "turretEncoder");
     }
 
-    public TurretSubsystem(HardwareMap hardwareMap, String servoName) {
-        turretServo = hardwareMap.get(Servo.class, servoName);
-        turretServo.setDirection(Servo.Direction.FORWARD);
+    public TurretSubsystem(HardwareMap hardwareMap, String servoName, String encoderName) {
+        turretServo = hardwareMap.get(CRServo.class, servoName);
+        encoder = hardwareMap.get(AnalogInput.class, encoderName);
+        turretServo.setDirection(CRServo.Direction.FORWARD);
+
+        stop(); // Forțează oprirea fizică în INIT
     }
 
     public void update(Pose robotPose) {
@@ -46,67 +53,82 @@ public class TurretSubsystem extends SubsystemBase {
         update(robotPose.x(), robotPose.y(), robotPose.heading(), targetX, targetY);
     }
 
-    public static double TURRET_OFFSET_X = -7.87;
-    public static double TURRET_OFFSET_Y = 4.33;
-
     public void update(double robotX, double robotY, double robotHeading, double targetX, double targetY) {
-        // 1. Calculate actual field position of the side-mounted turret
         double cosH = Math.cos(robotHeading);
         double sinH = Math.sin(robotHeading);
 
         double turretX = robotX + (TURRET_OFFSET_X * cosH - TURRET_OFFSET_Y * sinH);
         double turretY = robotY + (TURRET_OFFSET_X * sinH + TURRET_OFFSET_Y * cosH);
 
-        // 2. Vector from TURRET to target on field
         double deltaX = targetX - turretX;
         double deltaY = targetY - turretY;
 
-        // 3. Absolute field angle from the turret
         double targetFieldAngle = Math.atan2(deltaY, deltaX);
-
-        // 4. Convert to local robot frame
         double localTargetAngle = targetFieldAngle - robotHeading;
 
-        // 5. Normalize [-PI, PI]
-        localTargetAngle = normalizeRadians(localTargetAngle);
-
-        // 6. Send to servo
-        setTargetAngle(localTargetAngle);
+        setTargetAngle(normalizeRadians(localTargetAngle));
     }
 
     public void manualControl(double joystickInput) {
-        double currentAngleRad = Math.toRadians(lastTargetDeg);
-        double newAngleRad = currentAngleRad + (joystickInput * MANUAL_STEP_RADIANS);
-        setTargetAngle(newAngleRad);
+        double newAngleRad = targetAngleRad + (joystickInput * MANUAL_STEP_RADIANS);
+        setTargetAngle(normalizeRadians(newAngleRad));
     }
 
     public void centerTurret() {
-        setTargetAngle(0.0);
+        this.targetAngleRad = 0.0;
     }
 
-    private void setTargetAngle(double targetAngleRadians) {
-        // Limitare în unghiurile de siguranță ale turelei
-        double clampedAngle = Range.clip(targetAngleRadians, MIN_SAFE_ANGLE, MAX_SAFE_ANGLE);
-        this.lastTargetDeg = Math.toDegrees(clampedAngle);
+    public void stop() {
+        lastPower = 0.0;
+        lastError = 0.0;
+        turretServo.setPower(0.0);
+    }
 
-        // Mapare din unghi (-RANGE/2 ... +RANGE/2) în semnal servo (0.0 ... 1.0)
-        // Poziția 0.5 = Centru (0 radiani)
-        double servoPosition = 0.5 + ((clampedAngle + ZERO_OFFSET_RADIANS) / SERVO_RANGE_RADIANS);
+    public void setTargetAngle(double targetAngleRadians) {
+        this.targetAngleRad = normalizeRadians(targetAngleRadians);
 
-        this.lastServoPos = Range.clip(servoPosition, 0.0, 1.0);
-        turretServo.setPosition(lastServoPos);
+        double currentAngleRad = getCurrentAngleRad();
+        double error = normalizeRadians(this.targetAngleRad - currentAngleRad);
+
+        // Oprire directă în zona de toleranță (Deadband)
+        if (Math.abs(error) < ALLOWED_ERROR_RAD) {
+            stop();
+            return;
+        }
+
+        // Calcul PD (Proporțional - Derivativ)
+        double errorDerivative = error - lastError;
+        double power = (error * kP) + (errorDerivative * kD);
+
+        if (Math.abs(power) > 0) {
+            power += Math.signum(power) * MIN_POWER;
+        }
+
+        lastError = error;
+        lastPower = Range.clip(power, -1.0, 1.0);
+        turretServo.setPower(lastPower);
+    }
+
+    public double getCurrentAngleRad() {
+        double voltage = encoder.getVoltage();
+        double rawAngle = (voltage / ENCODER_VOLTAGE_MAX) * 2.0 * Math.PI - Math.PI;
+        return normalizeRadians(rawAngle - ZERO_OFFSET_RADIANS);
     }
 
     public void setInvertServo(boolean invert) {
-        turretServo.setDirection(invert ? Servo.Direction.REVERSE : Servo.Direction.FORWARD);
+        turretServo.setDirection(invert ? CRServo.Direction.REVERSE : CRServo.Direction.FORWARD);
     }
 
     public double getTargetAngleDeg() {
-        return lastTargetDeg;
+        return Math.toDegrees(targetAngleRad);
     }
 
-    public double getLastServoPos() {
-        return lastServoPos;
+    public double getCurrentAngleDeg() {
+        return Math.toDegrees(getCurrentAngleRad());
+    }
+
+    public double getLastPower() {
+        return lastPower;
     }
 
     private double normalizeRadians(double radians) {
