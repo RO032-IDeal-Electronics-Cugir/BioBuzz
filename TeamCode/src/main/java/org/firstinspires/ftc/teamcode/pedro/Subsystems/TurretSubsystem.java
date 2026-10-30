@@ -11,14 +11,14 @@ public class TurretSubsystem extends SubsystemBase {
     private final Servo turretServo;
 
     // SPECIFICAȚII FIZICE HARDWARE
-    public static double SERVO_RANGE_RADIANS = Math.toRadians(300.0); // Cursa totală a servoului (de ex. Axon 300 grade)
+    public static double SERVO_RANGE_RADIANS = Math.toRadians(355.0); // Cursa totală a servoului (de ex. Axon 300 grade)
 
     // ADJUST ME: Dacă turela nu privește exact în față la poziția 0.5 a servoului, ajustează aici în grade
-    public static double ZERO_OFFSET_RADIANS = Math.toRadians(57);
+    public static double ZERO_OFFSET_RADIANS = Math.toRadians(-5);
 
     // Limite fizice de siguranță (față de centrul robotului)
-    public static double MIN_SAFE_ANGLE = Math.toRadians(-135.0);
-    public static double MAX_SAFE_ANGLE = Math.toRadians(135.0);
+    public static double MIN_SAFE_ANGLE = Math.toRadians(-350.0);
+    public static double MAX_SAFE_ANGLE = Math.toRadians(350.0);
 
     public static double MANUAL_STEP_RADIANS = Math.toRadians(2.5);
 
@@ -46,22 +46,31 @@ public class TurretSubsystem extends SubsystemBase {
         update(robotPose.x(), robotPose.y(), robotPose.heading(), targetX, targetY);
     }
 
-    public void update(double robotX, double robotY, double robotHeading, double targetX, double targetY) {
-        // 1. Vectorul către țintă pe teren
-        double deltaX = targetX - robotX;
-        double deltaY = targetY - robotY;
+    public static double TURRET_OFFSET_X = -7.87;
+    public static double TURRET_OFFSET_Y = 4.33;
 
-        // 2. Unghiul absolut pe teren (în radiani, față de axa +X)
+    public void update(double robotX, double robotY, double robotHeading, double targetX, double targetY) {
+        // 1. Calculate actual field position of the side-mounted turret
+        double cosH = Math.cos(robotHeading);
+        double sinH = Math.sin(robotHeading);
+
+        double turretX = robotX + (TURRET_OFFSET_X * cosH - TURRET_OFFSET_Y * sinH);
+        double turretY = robotY + (TURRET_OFFSET_X * sinH + TURRET_OFFSET_Y * cosH);
+
+        // 2. Vector from TURRET to target on field
+        double deltaX = targetX - turretX;
+        double deltaY = targetY - turretY;
+
+        // 3. Absolute field angle from the turret
         double targetFieldAngle = Math.atan2(deltaY, deltaX);
 
-        // 3. Conversie la cadrul local al robotului:
-        // Explicatie: Daca robotul are heading H, turela trebuie sa scada H pentru a ramane tintita pe teren
+        // 4. Convert to local robot frame
         double localTargetAngle = targetFieldAngle - robotHeading;
 
-        // 4. Normalizare în intervalul [-PI, PI]
+        // 5. Normalize [-PI, PI]
         localTargetAngle = normalizeRadians(localTargetAngle);
 
-        // 5. Trimitem unghiul către servo
+        // 6. Send to servo
         setTargetAngle(localTargetAngle);
     }
 
@@ -101,8 +110,6 @@ public class TurretSubsystem extends SubsystemBase {
     }
 
     private double normalizeRadians(double radians) {
-        while (radians > Math.PI) radians -= 2 * Math.PI;
-        while (radians < -Math.PI) radians += 2 * Math.PI;
-        return radians;
+        return Math.atan2(Math.sin(radians), Math.cos(radians));
     }
 }
